@@ -1,0 +1,57 @@
+---
+title: "equations"
+author: "AFH"
+date: "November 14, 2016"
+output: html_document
+---
+
+Useful resources for equations in Rmarkdown:
+http://www.statpower.net/Content/310/R%20Stuff/SampleMarkdown.html
+http://reu.dimacs.rutgers.edu/Symbols.pdf
+http://www.calvin.edu/~rpruim/courses/m343/F12/RStudio/LatexExamples.html
+
+
+# Math for dispersal modeling 
+
+## From Gaylord and Gaines 2000: 
+
+Parameter | Value                                    
+---------- | ----------
+$L$ | larval concentration per unit area of ocean 
+$K$ | eddy diffusivity, an index describing the intensity of turbulent mixing, $m^2 s^{-1}$
+$u$ | eastward velocity 
+$v$ | northward velocity 
+$\lambda$ | larval per capita mortality rate, $s^{-1}$  
+$B$ | density of adults per unit length of coastline
+$c$ | settlement coefficient that quantifies the propensity of larvae to settle onto the shore (settlement rate), $s^{-1}$
+$F$ | amount of free space per unit of coastline
+$\mu$ | adult per capita mortality rate, $s^{-1}$
+$m$ | per capita rate of larval production, $s^{-1}$ 
+$A$ | total available area per meter of shoreline, $m$
+$a$ | adult basal area, $m^2$
+$d_1$ | larval precompetency duration, $s$
+$d_2$ | larval competency duration, $s$ 
+
+The temporal and spatial pattern of larval concentration is described by a two-dimensional advection-diffusion equation (which assumes implicitly that larvae remain within a single horizontal layer of the water column or are well mixed vertically in water of nearly constant depth):
+
+$$\frac{\partial L}{\partial t} = K \left[\frac{\partial ^2 L}{\partial x^2} + \frac{\partial ^2 L}{\partial y^2} \right] - u\frac{\partial L}{\partial x} - v\frac{\partial L}{\partial y} - \lambda L $$
+
+The first term (in brackets) on the right-hand side of this equation represents turbulent diffusion, while the second and third terms describe changes in concentration caused by advective transport of larval gradients. THe first term accounts for loss of larvae because of mortality. All variables in this equation are functions of $x$, $y$, and $t$, except for $K$ and $\lambda$ which are held constant."
+
+To isolate the influence of larval dispersal on species distribution, we assume a life cycle with a sessile adult phase:
+
+$$\frac{\partial B}{\partial t} = cFL_{shore} - \mu B$$
+
+The first term on the right-hand side represents increases in adult density caused by larval settlement, while the second accounts for adult deaths. All quantities in this equation vary with $y$ and $t$ except $\mu$ and $c$, which are constants. The appearance of $F$ in the first right-hand term indicates that settlement is density dependent, varying in proportion to the amount of free space available. Thus, $F = A - aB$ (see Roughgarden and Iwasa 1986), where $A$ is the total suitable substrate area per unit length of coastline and $a$ is the age-averaged area occupied by an adult.
+
+The above equations are coupled through a coastal boundary condition that specifies the rate at which larvae enter and leave the water at the shoreline:
+
+$$K\left(\frac{\partial L}{\partial x}\right)_{shore} = mB - cfL_{shore}$$
+
+This expression states that the net flux of larvae from the shoreline equals the difference between the production of parvae by adults and the rate at which larvae settle out of the water column into the benthic population. The additional boundary conditions required for the solution of equations 1-3 are defined such that $L=0$ along the oceanic edges of the solution space (i.e. the noncoastal boundaries are absorbing. Thus, any larvae carried past the northern, offshore, and southern borders do not return to the coastla region examined in this model. 
+
+Alexa notes: 
+
+* The contribution of this paper above others was the consideration of developmental stages, and the influence of larval duration on dispersal, as shown by making adult fecundity $m$ and the settlement coefficient $c$ functions of time, with $m$ pulsed at the beginning of each reproductive season before dropping to 0, and $c$ only nonzero during the competency period. 
+* Note that there is a clear analog between their boundary condition that larvae that disperse beyond the coastal oceans are lost, and the moving window approach of Fuller et al. 2015 
+
