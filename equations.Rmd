@@ -20,7 +20,7 @@ library(bookdown)
 
 Relevant manuscript excerpts - these 20th-century papers are far more eloquent than I: 
 
-### introduction 
+### Introduction 
 
 Our study differs from these efforts because it is the first to pertain to an organism whose adult phase is benthic and whose larvae are embedded in a circulation field in the water column. Benthic processes (competition for space during settlement, benthic mortality) affect the adults, and water column processes (diffusion, advection, and larval mortality) affect the larvae. The two stages are coupled in that benthic organisms release larvae into the water column and larval organisms settle into the benthic habitat. The focus of this article, therefore, is on the interaction of benthic and water column processes in determining population dynamics. The parameters in this study are based roughly on data from the rocky intertidal barnacle _Balanus glandular_.
 
@@ -33,17 +33,17 @@ Previously, the conditions for the persistence of a single homogeneous populatio
 Three major assumptions are: 
 
 1. The coast is straight and coincident with the $y$-axis such that the larvae disperse in a water column defined by the semi-infinite plane $x \leq 0$ and $-\infty < y < \infty$. 
-2. The model water column is two dimensional, as appropriate for larvae that remain in a particular depth interval (Grosberg 1982, Banse 1986, but see Rothlisberg et al. 1983). 
-3. The biological parameters for both the larvae and the adults are age-integrated averages.
+1. The model water column is two dimensional, as appropriate for larvae that remain in a particular depth interval (Grosberg 1982, Banse 1986, but see Rothlisberg et al. 1983). 
+1. The biological parameters for both the larvae and the adults are age-integrated averages.
 
 ### population modeling component 
 
 Roughgarden and Iwasa (1986) described a population model for a sessile marine invertebrate with a pelagic larval phase. Adults along the coast die at rate $\mu$ and produce larvae at average rate $m$. Larvae settle on the coast at a rate that is proportional to the product of the amount of free space available, $F(t)$, and the concentration of larvae in the water column, where the constant of proportionality is $c$. In the water column the larvae die at a density-independent rate $\lambda$. Using these assumptions the equations for the dynamics of the species are (EQN1A, B, C):
 
 $$ dB(t)/dt = cF(t)L(t) - \mu B(t), $$
-$$ A \equiv F(t) + aB(t), $$ 
+$$ A \equiv F(t) + aB(t), $$
 and 
-$$ dL(t)/dt = mB(t) - \lambda L(t) - cF(t)L(t) $$ 
+$$dL(t)/dt = mB(t) - \lambda L(t) - cF(t)L(t)$$
 
 Where $B(t)$ is the number of adults at time $t$, $L(t)$ is the number of larvae at time $t$, $A$ is the total available free space, and $a$ is the average space occupied by a single adult barnacle. 
 
@@ -51,7 +51,9 @@ Roughgarden and Iwasa (1986) show that the equilibrium state for this single pop
 
 $$ \hat{B} = \frac{A}{a} \left[1-\frac{\lambda \mu}{cA(m-\mu)} \right] $$
 
-and $$\hat{L} = (m - \mu)\hat{B}\lambda$$ 
+and 
+
+$$\hat{L} = (m - \mu)\hat{B}\lambda$$ 
 
 which is globally stable if positive. 
 
@@ -132,10 +134,119 @@ This expression states that the net flux of larvae from the shoreline equals the
 * Note that there is a clear analog between their boundary condition that larvae that disperse beyond the coastal oceans are lost, and the moving window approach of Fuller et al. 2015 
 * The authors model flow fields by varying $u(x,y)$ and $v(x,y)$ - i.e. eastward and northward velocity - to represent alongshore, converging, diverging, and eddy circulation currents. Cape Hatteras is a converging boundary. 
 * The authors solved these equations for the species distributions they produce - i.e. adult abundance on the coast.
-* This may actually be more complex than I need if I really just want to marry a very simple dispersal model with Emma Fuller's 1D range shift model. Maybe go back to Possingham and Roughgarden? 
-
-## Fuller et al. 2015
 
 
+# Code for dispersal modeling
+
+Goals:
+
+1. Code Gaylord and Gaines 2000 verbatim in R. 
+1. Incorporate range shift component by moving the suitable habitat along a coastline. 
+1. Run model for following scenarios, *for all four current regimes* (converging, diverging, advective, eddy): 
++ leading edge approaching/crossing boundary
++ trailing edge approaching/crossing boundary
++ leading edge receding from boundary
++ trailing edge receding from boundary
+
+
+This is going to be a shitshow. See https://journal.r-project.org/archive/2010-2/RJournal_2010-2_Soetaert~et~al.pdf for guidance on solving partial differential equations, and the Practical Guide to Ecological Modelling textbook. 
+
+Parameters and functions: 
+``` {r}
+
+# parameters - reproduced from Gaylord and Gaines 2000 
+A <- 1 # area available per meter of shoreline, m (square meters available per meter) 
+a <- 0.0001 # basal area of an adult, parameterized for barnacles, in m^2 
+mu <- 0.5 # adult mortality rate, annual 
+m <- 0.0032 # larval production rate per second - they used seasonal reproduction in this model but calculated the instantaneous reproduction rate for comparison to past models 
+c_settle <- 0.00005 # larval settlement coefficient (instantaneous rate of individuals per second) 
+d_1 <- 1800000 # larval precompetency duration, seconds (3 weeks)
+d_2 <- 1800000 # larval competency duration, seconds (3 weeks) 
+
+library(ReacTran)
+library(deSolve) 
+
+```
+
+## First, a practice problem with ReacTran and partial differential equations. 
+
+To solve a 1-D diffusion-reaction model:  
+
+$$\frac{\partial C}{\partial t} = \frac{\partial}{\partial x} \left(D\frac{\partial C}{\partial x}\right) -Q$$
+
+with C the concentration, t the time, x the distance from the origin, Q, the consumption rate, and with boundary conditions (values at the model edges):
+
+$$ \frac{\partial C}{\partial x} _{x=0} = 0 $$
+$$ C _(x=10) = C _{ext} $$
+
+```{r}
+
+# To solve this model in R, first the 1-D model Grid is defined; it divides 10 cm (L) into 1000 boxes (N). 
+
+library(ReacTran)
+Grid <- setup.grid.1D(N = 1000, L = 10)
+
+# The model equation includes a transport term, approximated by ReacTran function tran.1D and a consumption term (Q). The downstream boundary condition, prescribed as a concentration (C.down) needs to be specified, the zero-gradient at the upstream boundary is the default:
+
+ pde1D <-function(t, C, parms)  {
+   tran <- tran.1D(C = C, D = D,
+                   C.down = Cext, dx = Grid)$dC
+   list(tran - Q)  # return value: rate of change
+ }
+ 
+# The model parameters are:
+ 
+D <- 1 # diffusion constant 
+Q <- 1 # uptake rate
+Cext <- 20 # still not sure what this value means
+
+# In a first application, the model is solved to steady-state, which retrieves the condition where the concentrations are invariant (i.e. replace left side of the model equation above, partial C / partial t, with zero, equal to the right side.)
+
+# In R, steady-state conditions can be estimated using functions from package rootSolve which implement amongst others a Newton-Raphson algorithm (Press et al., 2007). For 1-dimensional models, steady.1D is most efficient. The initial “guess” of the steady-state solution (y) is unimportant; here we take simply N random numbers. Argument nspec = 1 informs the solver that only one component is described.
+
+# Although a system of 1000 equations needs to be solved, this takes only a fraction of a second:
+
+
+ library(rootSolve)
+ print(system.time(
+ std   <- steady.1D(y = runif(Grid$N),
+   func = pde1D, parms = NULL, nspec = 1)
+ ))
+ 
+# The values of the state-variables (y) are plotted against the distance, in the middle of the grid cells (Grid$x.mid).
+ 
+ plot (Grid$x.mid, std$y, type = "l",
+   lwd = 2, main = "steady-state PDE",
+   xlab = "x", ylab = "C", col = "red")
+ 
+ # The analytical solution compares well with the numerical approximation:
+ 
+analytical <- Q/2/D*(Grid$x.mid^2 - 10^2) + Cext
+ max(abs(analytical - std$y))
+ 
+ # Next the model is run dynamically for 100 time units using deSolve function ode.1D, and starting with a uniform concentration:
+ 
+require(deSolve)
+times <- seq(0, 100, by = 1)
+system.time(
+  out <- ode.1D(y = rep(1, Grid$N),
+    times = times, func = pde1D,
+    parms = NULL, nspec = 1)
+)
+
+# Here, out is a matrix, whose 1st column contains the output times, and the next columns the values of the state variables in the different boxes; we print the first columns of the last three rows of this matrix:
+
+tail(out[, 1:4], n = 3)
+
+# We plot the result using a blue-yellow-red color scheme, and using deSolve’s S3 method image. Fig- ure 6 shows that, as time proceeds, gradients develop from the uniform distribution, until the system almost reaches steady-state at the end of the simulation.
+
+ image(out, xlab = "time, days",
+       ylab = "Distance, cm",
+       main = "PDE", add.contour = TRUE)
+ 
+# It should be noted that the steady-state model is effectively a boundary value problem, while the transient model is a prototype of a “parabolic” partial differential equation (LeVeque, 2007).
+# Whereas R can also solve the other two main classes of PDEs, i.e. of the “hyperbolic” and “ellip- tic” type, it is well beyond the scope of this paper to elaborate on that.
+ 
+```
 
 
