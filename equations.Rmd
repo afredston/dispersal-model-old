@@ -36,7 +36,7 @@ Three major assumptions are:
 1. The model water column is two dimensional, as appropriate for larvae that remain in a particular depth interval (Grosberg 1982, Banse 1986, but see Rothlisberg et al. 1983). 
 1. The biological parameters for both the larvae and the adults are age-integrated averages.
 
-### population modeling component 
+### Population modeling component 
 
 Roughgarden and Iwasa (1986) described a population model for a sessile marine invertebrate with a pelagic larval phase. Adults along the coast die at rate $\mu$ and produce larvae at average rate $m$. Larvae settle on the coast at a rate that is proportional to the product of the amount of free space available, $F(t)$, and the concentration of larvae in the water column, where the constant of proportionality is $c$. In the water column the larvae die at a density-independent rate $\lambda$. Using these assumptions the equations for the dynamics of the species are (EQN1A, B, C):
 
@@ -149,7 +149,7 @@ Goals:
 + trailing edge receding from boundary
 
 
-This is going to be a shitshow. See https://journal.r-project.org/archive/2010-2/RJournal_2010-2_Soetaert~et~al.pdf for guidance on solving partial differential equations, and the Practical Guide to Ecological Modelling textbook. 
+This is going to be a challenge. See https://journal.r-project.org/archive/2010-2/RJournal_2010-2_Soetaert~et~al.pdf for guidance on solving partial differential equations, and the Practical Guide to Ecological Modelling textbook. 
 
 Parameters and functions: 
 ``` {r}
