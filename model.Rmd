@@ -1,0 +1,110 @@
+---
+title: "model"
+output: html_document
+---
+
+# Code for dispersal modeling
+
+Goals:
+
+1. Code Gaylord and Gaines 2000 verbatim in R. 
+1. Incorporate range shift component by moving the suitable habitat along a coastline. 
+1. Run model for following scenarios, *for all four current regimes* (converging, diverging, advective, eddy): 
++ leading edge approaching/crossing boundary
++ trailing edge approaching/crossing boundary
++ leading edge receding from boundary
++ trailing edge receding from boundary
+
+
+See https://journal.r-project.org/archive/2010-2/RJournal_2010-2_Soetaert~et~al.pdf for guidance on solving partial differential equations, and the Practical Guide to Ecological Modelling textbook. Also: K. Soetaert et al.,
+Solving Differential Equations in R
+https://cran.r-project.org/web/packages/diffEq/vignettes/PDEinR.pdf
+https://cran.r-project.org/web/views/DifferentialEquations.html
+
+
+Parameters and functions: 
+``` {r eval=F}
+
+# parameters - reproduced from Gaylord and Gaines 2000 
+A <- 1 # area available per meter of shoreline, m (square meters available per meter) 
+a <- 0.0001 # basal area of an adult, parameterized for barnacles, in m^2 
+mu <- 0.5 # adult mortality rate, annual 
+m <- 0.0032 # larval production rate per second - they used seasonal reproduction in this model but calculated the instantaneous reproduction rate for comparison to past models 
+c_settle <- 0.00005 # larval settlement coefficient (instantaneous rate of individuals per second) 
+d_1 <- 1800000 # larval precompetency duration, seconds (3 weeks)
+d_2 <- 1800000 # larval competency duration, seconds (3 weeks) 
+```
+
+Notes from differential equation textbook: 
+```{r eval=F}
+library(ReacTran)
+library(deSolve) 
+library(rootSolve) 
+
+# solving the heat equation in R 
+# part one: use ReacTran to break the PDE down into a set of ODEs
+
+N <- 100 # number of grid cells
+xgrid <- setup.grid.1D(x.up = 0, x.down = 1, N = N) # no clue if this is sufficient
+ygrid <- setup.grid.1D(y.up = 0, y.down = 1, N = N)
+x <- xgrid$x.mid # just positions x in the middle of the grid to start? 
+D.coeff <- 0.01
+
+# what I don't understand in the below is where the mathematical equation is incorporated. Since I'm not using a classic heat equation, how would I vary this code? Or is tran.1D just a classic transport formula that can't be modified for my purposes?  
+
+Diffusion <- function (t, Y, parms){
+  tran <- tran.1D(C = Y, C.up =  0, C.down = 1,
+                  D = D.coeff, dx = xgrid) # transport is performed by the ReacTran function tran.1D, where we specify the up stream and down stream boundary conditions (C.up, C.down),  the  diffusion  coefficient  (D), and the spatial grid used (dx). 
+  list(dY = tran$dC, flux.up = tran$flux.up,
+       flux.down = tran$flux.down) # Function tran.1D returns a lot of useful information, such as the derivative ($dC), and the fluxes across the upstream and downstream boundary ($flux.up,$flux.down), packed as a list. The fluxes are also returned from the function Diffusion.
+}
+
+# I think the function has to be broken down into a classic transport problem plus other components executed separately - see this code for the wave equation: 
+
+library(ReacTran)
+dx    <- 0.2 # this specifies the grid size rather than number of grid cells, I think 
+xgrid <- setup.grid.1D(x.up = -100, x.down = 100, dx.1 = dx)
+x     <- xgrid$x.mid 
+N     <- xgrid$N # number of grid cells? 
+
+lam   <- 0.05
+uini  <- exp(-lam*x^2) # initial values of variables - given as equation initial values (I don't think I have these ... )
+vini  <- rep(0, N)
+yini  <- c(uini, vini)
+times <- seq (from = 0, to = 50, by = 1)
+
+wave <- function (t, y, parms) {
+  u <- y[1:N]
+  v <- y[(N+1):(2*N)]
+  du <- v
+  dv <- tran.1D(C = u, C.up = 0, C.down = 0, D = 1,
+                dx = xgrid)$dC
+return(list(c(du, dv)))
+}
+# part two: solve the set of ODEs for a given initial condition and output time (how do I figure this out?)  
+```
+
+In order to solve a second-order partial differential equation (PDE) like equation #1 in Gaylord and Gaines 2000, I have to use the package ReacTran to break the PDE down into a set of ODEs (using the finite difference method? or method of lines?) based on the `tran.1D` or `tran.2D` (don't entirely understand the use case of one vs. the other, since the textbook uses `tran.1D` for some second-order equations) which performs the transport component and calculates derivatives and flux based only on the upstream and downstream boundary conditions (`C.up` and `C.down`), the diffusion coefficient `D`, and the spatial grid used `dx`. 
+
+I think this is a parabolic PDE 
+
+# Thank-yous 
+
+Jamie Afflerbach 
+Ben Best 
+Laura Dee 
+Steve Gaines 
+Ben Halpern
+Jon Hare 
+Elizabeth Hiroyasu 
+Allison Horst 
+Julie Lowndes 
+Owen Liu 
+Casey O'Hara
+Dan Ovando 
+Malin Pinsky 
+Becca Selden 
+Jim Hateley 
+
+And counting ... 
+

@@ -136,34 +136,3 @@ This expression states that the net flux of larvae from the shoreline equals the
 * The authors solved these equations for the species distributions they produce - i.e. adult abundance on the coast.
 
 
-# Code for dispersal modeling
-
-Goals:
-
-1. Code Gaylord and Gaines 2000 verbatim in R. 
-1. Incorporate range shift component by moving the suitable habitat along a coastline. 
-1. Run model for following scenarios, *for all four current regimes* (converging, diverging, advective, eddy): 
-+ leading edge approaching/crossing boundary
-+ trailing edge approaching/crossing boundary
-+ leading edge receding from boundary
-+ trailing edge receding from boundary
-
-
-This is going to be a challenge. See https://journal.r-project.org/archive/2010-2/RJournal_2010-2_Soetaert~et~al.pdf for guidance on solving partial differential equations, and the Practical Guide to Ecological Modelling textbook. 
-
-Parameters and functions: 
-``` {r}
-
-# parameters - reproduced from Gaylord and Gaines 2000 
-A <- 1 # area available per meter of shoreline, m (square meters available per meter) 
-a <- 0.0001 # basal area of an adult, parameterized for barnacles, in m^2 
-mu <- 0.5 # adult mortality rate, annual 
-m <- 0.0032 # larval production rate per second - they used seasonal reproduction in this model but calculated the instantaneous reproduction rate for comparison to past models 
-c_settle <- 0.00005 # larval settlement coefficient (instantaneous rate of individuals per second) 
-d_1 <- 1800000 # larval precompetency duration, seconds (3 weeks)
-d_2 <- 1800000 # larval competency duration, seconds (3 weeks) 
-
-library(ReacTran)
-library(deSolve) 
-
-```
